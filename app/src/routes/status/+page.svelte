@@ -1,147 +1,389 @@
 <script lang="ts">
-    // let role = $state('')
-    let section = $state(4)
-    // let owner = $state('no')
-    let dept = $state('')
+    import AppShell from '$lib/components/AppShell.svelte';
+    import ApplicationCard from '$lib/components/ApplicationCard.svelte';
+    
+    let { data } = $props();
+    let app = $derived(data.application);
 
+    // Helpers to determine step states
+    function stepStatus(app, stepNum) {
+        if (!app) return 'pending';
+        const s = app.status;
+        
+        if (s === 'rejected' || s === 'revoked') return 'rejected';
+        
+        if (stepNum === 1) { // Dean Approval
+            if (app.role === 'visitor') return 'done'; // Visitors skip dean
+            if (['osa_val', 'osa_dist', 'expired'].includes(s)) return 'done';
+            if (s === 'dept_val') return 'active';
+            return 'pending';
+        }
+        
+        if (stepNum === 2) { // OSA Validation
+            if (['osa_dist', 'expired'].includes(s)) return 'done';
+            if (s === 'osa_val') return 'active';
+            return 'pending';
+        }
 
-    let tab = $state('validation');
-    let owner = $state('no');
-    let role = $state('employee');
+        if (stepNum === 3) { // Status / Distribution
+            if (s === 'osa_dist') return 'done'; // Available for pickup
+            if (s === 'expired') return 'expired';
+            return 'pending';
+        }
+        return 'pending';
+    }
 </script>
 
+<svelte:head>
+  <title>Application Status — GateQR</title>
+  <meta name="description" content="Track the status of your vehicle sticker application at Liceo de Cagayan University." />
+</svelte:head>
 
-<div class="flex items-center justify-center bg-gray-100 py-10 min-h-screen">
-    <div class="flex flex-col w-lg gap-2">
+<AppShell>
+  <!-- User greeting -->
+  <div class="welcome-bar">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    <span>{data.userEmail}</span>
+  </div>
 
-        <p class="m-auto mb-4 text-lg">
-            Welcome, <span class="font-medium">joenino.cainday@liceo.edu.ph</span>
-        </p>
-
-        <label class="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked disabled>
-            <span>Step 1: Approval from the College Head</span>
-        </label>
-
-        <label class="flex items-center gap-2 text-sm text-gray-400">
-            <input type="checkbox" disabled>
-            <span>Step 2: Approval from the Office of Student Affairs</span>
-        </label>
-
-        <label class="flex items-center gap-2 text-sm text-gray-400">
-            <input type="checkbox" disabled>
-            <span>Step 3: Visit OSA to acquire the official QR Code sticker</span>
-        </label>
-        
-        <div class="border p-4 flex flex-col gap-4 bg-white">
-            
-            <!-- Top section: QR + Details -->
-            <div class="flex flex-col sm:flex-row gap-3 sm:gap-2 items-start">
-                
-                <!-- Details -->
-                <div class="flex items-start justify-between w-full min-w-0">
-                    <table class="text-sm sm:ml-4 w-full">
-                        <tbody>
-                            <tr>
-                                <td class="font-medium pr-4 pb-1 whitespace-nowrap align-top">ID:</td>
-                                <td class="pb-1 break-all">2022307166</td>
-                            </tr>
-                            <tr>
-                                <td class="font-medium pr-4 pb-1 whitespace-nowrap align-top">Name:</td>
-                                <td class="pb-1">Joeninyo Cainday</td>
-                            </tr>
-                            <tr>
-                                <td class="font-medium pr-4 pb-1 whitespace-nowrap align-top">Email:</td>
-                                <td class="pb-1 break-all">joenino.cainday@liceo.edu.ph</td>
-                            </tr>
-                            <tr>
-                                <td class="font-medium pr-4 pb-1 whitespace-nowrap align-top">department:</td>
-                                <td class="pb-1">BSCS</td>
-                            </tr>
-                            <tr>
-                                <td class="font-medium pr-4 pb-1 whitespace-nowrap align-top">dean:</td>
-                                <td class="pb-1">junar.landicho@liceo.edu.ph</td>
-                            </tr>
-                            <tr>
-                                <td class="font-medium pr-4 pb-1 whitespace-nowrap align-top">Vehicle:</td>
-                                <td class="pb-1">Toyota Corolla</td>
-                            </tr>
-                            <tr>
-                                <td class="font-medium pr-4 pb-1 whitespace-nowrap align-top">Plate:</td>
-                                <td class="pb-1">ABC-1234</td>
-                            </tr>
-                            <tr>
-                                <td class="font-medium pr-4 pb-1 whitespace-nowrap align-top">Owner:</td>
-                                <td class="pb-1">No</td>
-                            </tr>
-                        </tbody>
-                    </table>
-
-                    <!-- Status -->
-                    <div class="flex flex-col gap-1 shrink-0">
-                        <div class="border p-1 font-medium text-[11px] shrink-0">CRD: Feb 06 2023</div>
-                        <div class="border p-1 font-medium text-[11px] shrink-0">APV: Feb 06 2023</div>
-                        {#if tab !== 'validation'}
-                            <div class="border p-1 font-medium text-[11px] shrink-0">SCH: Feb 06 2023</div>
-                            {#if ['monitoring', 'history'].includes(tab)}    
-                                <div class="border p-1 font-medium text-[11px] shrink-0">DLV: Mar 24 2024</div>
-                            {/if}
-                            <div class="border p-1 font-medium text-[11px] shrink-0">EXP: Mar 24 2024</div>
-                        {/if}
-                        {#if tab === 'history'}
-                            <div class="border p-1 font-medium text-[11px] shrink-0">STS: Expired</div>
-                        {/if}
-                    </div>
-                        
-                </div>
-
-            </div>
-
-            <!-- Document buttons -->
-            <div class="flex flex-col gap-2">
-                {#if role !== 'visitor'}
-                    <div class="grid gap-2 {owner === 'no' ? 'grid-cols-3' : 'grid-cols-2'}">
-                        <div class="border w-full h-20 flex justify-center items-center text-xs cursor-pointer hover:bg-gray-100">
-                            (Liceo) {role === 'student' ? 'Student' : 'Employee'} ID
-                        </div>
-                        <div class="border w-full h-20 flex justify-center items-center text-xs cursor-pointer hover:bg-gray-100">
-                            (Liceo) {role === 'student' ? 'Enrollment Form' : 'Load Sheet / DTR'}
-                        </div>
-                        {#if owner === 'no'}
-                            <div class="border w-full h-20 flex justify-center items-center text-xs cursor-pointer hover:bg-gray-200">
-                                Signed Letter / DOAS
-                            </div>
-                        {/if}
-                    </div>
-                {/if}
-                {#if role === 'visitor' && owner === 'yes'}
-                <div class="grid grid-cols-2 gap-2">
-                        <div class="border w-full h-20 flex justify-center items-center text-xs cursor-pointer hover:bg-gray-200">
-                        (LTO) Driver's License
-                    </div>
-                    <div class="border w-full h-20 flex justify-center items-center text-xs cursor-pointer hover:bg-gray-200">
-                        Signed Letter / DOAS
-                    </div>
-                    </div>
-                {/if}
-
-                <div class="grid gap-2 {role === 'visitor' && owner === 'yes' ? 'grid-cols-2' : 'grid-cols-3'}">
-                    {#if ['student', 'employee'].includes(role) || role === 'visitor' && owner === 'no'}
-                    <div class="border w-full h-20 flex justify-center items-center text-xs cursor-pointer hover:bg-gray-200">
-                        (LTO) Driver's License
-                    </div>
-                    {/if}
-                    <div class="border w-full h-20 flex justify-center items-center text-xs cursor-pointer hover:bg-gray-100">
-                        (LTO) Vehicle OR
-                    </div>
-                    <div class="border w-full h-20 flex justify-center items-center text-xs cursor-pointer hover:bg-gray-100">
-                        (LTO) Vehicle CR
-                    </div>
-                </div>
-            </div>
+  {#if app}
+    {#if app.status === 'rejected' || app.status === 'revoked'}
+      <div class="alert-box alert-error">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <div>
+          <p class="alert-title">Application {app.status}</p>
+          <p class="alert-desc">{app.invalid_reason || 'No reason provided.'}</p>
+        </div>
+      </div>
+      <a href="/" class="btn-reapply">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        Submit New Application
+      </a>
+    {:else if app.status === 'expired'}
+      <div class="alert-box alert-warning">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <div>
+          <p class="alert-title">Sticker Expired</p>
+          <p class="alert-desc">Your parking sticker has expired. Please submit a new application to renew.</p>
+        </div>
+      </div>
+      <a href="/" class="btn-reapply">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        Submit New Application
+      </a>
+    {:else}
+      <!-- Progress Steps -->
+      <div class="progress-steps">
+        <div class="progress-step" class:step-done={stepStatus(app, 1) === 'done'} class:step-active={stepStatus(app, 1) === 'active'} class:step-pending={stepStatus(app, 1) === 'pending'}>
+          <div class="ps-icon">
+            {#if stepStatus(app, 1) === 'done'}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+            {:else}
+              1
+            {/if}
+          </div>
+          <div class="ps-info">
+            <span class="ps-label">Step 1</span>
+            <span class="ps-desc">Approval from College Head</span>
+          </div>
         </div>
 
-        <p class="m-auto mt-4 text-xs">If you encounter any issues, contact <span class="underline" href="">osa@liceo.edu.ph</span></p>
+        <div class="ps-connector"></div>
 
+        <div class="progress-step" class:step-done={stepStatus(app, 2) === 'done'} class:step-active={stepStatus(app, 2) === 'active'} class:step-pending={stepStatus(app, 2) === 'pending'}>
+          <div class="ps-icon">
+            {#if stepStatus(app, 2) === 'done'}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+            {:else}
+              2
+            {/if}
+          </div>
+          <div class="ps-info">
+            <span class="ps-label">Step 2</span>
+            <span class="ps-desc">Approval from Office of Student Affairs</span>
+          </div>
+        </div>
+
+        <div class="ps-connector"></div>
+
+        <div class="progress-step" class:step-done={stepStatus(app, 3) === 'done'} class:step-active={stepStatus(app, 3) === 'active'} class:step-pending={stepStatus(app, 3) === 'pending'}>
+          <div class="ps-icon">
+            {#if stepStatus(app, 3) === 'done'}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+            {:else}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>
+            {/if}
+          </div>
+          <div class="ps-info">
+            <span class="ps-label">Step 3</span>
+            <span class="ps-desc">Visit OSA to acquire QR sticker</span>
+            {#if app.dist_sched}
+              <div class="sched-pill">Scheduled: {new Date(app.dist_sched).toLocaleString('en-US', {dateStyle: 'medium', timeStyle: 'short'})}</div>
+            {/if}
+          </div>
+        </div>
+      </div>
+    {/if}
+
+    <ApplicationCard data={{
+      id: app.id || '-',
+      name: `${app.first_name} ${app.last_name}`,
+      role: app.role,
+      email: data.userEmail,
+      department: app.department_name || '-',
+      'dept. email': app.department_email || '-',
+      vehicle: app.vehicle_make,
+      plate: app.vehicle_plate,
+      owner: app.is_owner ? 'Yes' : 'No',
+      status: app.status,
+      crd: app.created_at,
+      sgn: app.dept_val_at,
+      apv: app.osa_val_at,
+      sch: app.dist_sched,
+      exp: app.expires_at,
+      dlv: app.osa_dist_at,
+      rejection_reason: app.invalid_reason || null,
+      documents: {
+        id: app.doc_id,
+        enrollment: app.doc_load,
+        or: app.doc_or,
+        cr: app.doc_cr,
+        license: app.doc_license,
+        letter: app.doc_letter
+      }
+    }}>
+    </ApplicationCard>
+  {:else}
+    <div class="no-app">
+      <p>You have not submitted a vehicle application yet.</p>
+      <a href="/" class="btn-apply">Submit Application</a>
     </div>
-</div>
+  {/if}
+
+  <p class="form-footer">
+    Issues? Contact <a href="mailto:osa@liceo.edu.ph" class="footer-link">osa@liceo.edu.ph</a>
+  </p>
+</AppShell>
+
+<style>
+  .welcome-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0.5rem 0.875rem;
+  }
+
+  .welcome-bar svg { color: var(--maroon); flex-shrink: 0; }
+
+  .progress-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 1rem 1.25rem;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .progress-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.875rem;
+  }
+
+  .ps-connector {
+    width: 2px;
+    height: 24px;
+    background: var(--border-light);
+    margin-left: 17px;
+    margin: 4px 0 4px 17px;
+  }
+
+  .ps-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border: 2px solid var(--border);
+    background: var(--surface);
+    color: var(--text-muted);
+    transition: all 0.2s;
+  }
+
+  .step-done .ps-icon {
+    background: var(--maroon);
+    border-color: var(--maroon);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(107,26,42,0.25);
+  }
+
+  .ps-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    padding-top: 0.5rem;
+  }
+
+  .ps-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--maroon);
+  }
+
+  .step-pending .ps-label { color: var(--text-muted); }
+
+  .ps-desc {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  .step-pending .ps-desc { color: var(--text-muted); }
+
+  .sched-pill {
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--maroon);
+    background: var(--maroon-muted);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    display: inline-block;
+  }
+
+  .form-footer {
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+
+  .footer-link:hover { text-decoration: underline; }
+
+  .no-app {
+    text-align: center;
+    padding: 3rem 1rem;
+    background: var(--surface);
+    border: 1.5px dashed var(--border);
+    border-radius: var(--radius-md);
+  }
+
+  .btn-apply {
+    display: inline-block;
+    margin-top: 1rem;
+    padding: 0.75rem 1.5rem;
+    background: var(--maroon);
+    color: white;
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  .alert-box {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 1rem;
+    border-radius: var(--radius-md);
+    margin-bottom: 1rem;
+  }
+
+  .alert-error {
+    background: #fef2f2;
+    border: 1.5px solid #fca5a5;
+    color: #b91c1c;
+    margin-bottom: 0.75rem;
+  }
+
+  .alert-warning {
+    background: #fffbeb;
+    border: 1.5px solid #fde68a;
+    color: #b45309;
+    margin-bottom: 0.75rem;
+  }
+
+  .btn-reapply {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    padding: 0.75rem 1.25rem;
+    background: var(--maroon);
+    color: white;
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.85rem;
+    box-shadow: 0 4px 12px rgba(107,26,42,0.3);
+    transition: background 0.15s, transform 0.15s;
+  }
+
+  .btn-reapply:hover {
+    background: var(--maroon-light);
+    transform: translateY(-1px);
+  }
+
+  .alert-title {
+    font-weight: 700;
+    margin: 0 0 0.2rem;
+    text-transform: capitalize;
+  }
+  
+  .alert-desc {
+    font-size: 0.85rem;
+    margin: 0;
+  }
+
+  .user-qr-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px dashed var(--border-light);
+  }
+
+  .user-qr-display p {
+    font-weight: 700;
+    color: var(--maroon);
+    margin: 0;
+  }
+
+  .user-qr-display img {
+    width: 150px;
+    height: 150px;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    padding: 0.5rem;
+    background: white;
+  }
+
+  .dl-btn {
+    padding: 0.5rem 1rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.8rem;
+    transition: background 0.2s;
+  }
+
+  .dl-btn:hover {
+    background: var(--maroon-muted);
+    color: var(--maroon);
+  }
+</style>

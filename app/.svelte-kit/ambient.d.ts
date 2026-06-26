@@ -38,7 +38,15 @@
  * The above values will be the same _even if_ different values for `ENVIRONMENT` or `PUBLIC_BASE_URL` are set at runtime, as they are statically replaced in your code with their build time values.
  */
 declare module '$env/static/private' {
-	export const PYTHON_BASIC_REPL: string;
+	export const DATABASE_URL: string;
+	export const JWT_SECRET: string;
+	export const OSA_EMAIL: string;
+	export const QR_EXPIRY_MONTHS: string;
+	export const REFRESH_JWT_SECRET: string;
+	export const SMTP_HOST: string;
+	export const SMTP_PASS: string;
+	export const SMTP_PORT: string;
+	export const SMTP_USER: string;
 	export const USER: string;
 	export const npm_config_user_agent: string;
 	export const GIT_ASKPASS: string;
@@ -47,6 +55,7 @@ declare module '$env/static/private' {
 	export const HOME: string;
 	export const OLDPWD: string;
 	export const LESS: string;
+	export const ANTIGRAVITY_CLI_ALIAS: string;
 	export const TERM_PROGRAM_VERSION: string;
 	export const VSCODE_IPC_HOOK_CLI: string;
 	export const npm_package_json: string;
@@ -57,8 +66,6 @@ declare module '$env/static/private' {
 	export const FNM_ARCH: string;
 	export const VSCODE_GIT_ASKPASS_NODE: string;
 	export const DBUS_SESSION_BUS_ADDRESS: string;
-	export const PYDEVD_DISABLE_FILE_VALIDATION: string;
-	export const BUNDLED_DEBUGPY_PATH: string;
 	export const VSCODE_PYTHON_AUTOACTIVATE_GUARD: string;
 	export const npm_config_engine_strict: string;
 	export const WSL_DISTRO_NAME: string;
@@ -68,9 +75,9 @@ declare module '$env/static/private' {
 	export const FNM_LOGLEVEL: string;
 	export const LOGNAME: string;
 	export const pnpm_config_verify_deps_before_run: string;
-	export const PULSE_SERVER: string;
-	export const WSL_INTEROP: string;
 	export const NAME: string;
+	export const WSL_INTEROP: string;
+	export const PULSE_SERVER: string;
 	export const _: string;
 	export const FNM_NODE_DIST_MIRROR: string;
 	export const USER_ZDOTDIR: string;
@@ -84,8 +91,6 @@ declare module '$env/static/private' {
 	export const npm_config_frozen_lockfile: string;
 	export const DISPLAY: string;
 	export const LANG: string;
-	export const VSCODE_DEBUGPY_ADAPTER_ENDPOINTS: string;
-	export const PYTHONSTARTUP: string;
 	export const VSCODE_INJECTION: string;
 	export const LS_COLORS: string;
 	export const FNM_DIR: string;
@@ -109,11 +114,10 @@ declare module '$env/static/private' {
 	export const npm_command: string;
 	export const PNPM_SCRIPT_SRC_DIR: string;
 	export const FNM_COREPACK_ENABLED: string;
-	export const HOSTTYPE: string;
 	export const WSL2_GUI_APPS_ENABLED: string;
+	export const HOSTTYPE: string;
 	export const WSLENV: string;
 	export const INIT_CWD: string;
-	export const CONSOLE_NINJA_WELCOME_SHOWN: string;
 	export const NODE_ENV: string;
 }
 
@@ -201,7 +205,15 @@ declare module '$env/static/public' {
  */
 declare module '$env/dynamic/private' {
 	export const env: {
-		PYTHON_BASIC_REPL: string;
+		DATABASE_URL: string;
+		JWT_SECRET: string;
+		OSA_EMAIL: string;
+		QR_EXPIRY_MONTHS: string;
+		REFRESH_JWT_SECRET: string;
+		SMTP_HOST: string;
+		SMTP_PASS: string;
+		SMTP_PORT: string;
+		SMTP_USER: string;
 		USER: string;
 		npm_config_user_agent: string;
 		GIT_ASKPASS: string;
@@ -210,6 +222,7 @@ declare module '$env/dynamic/private' {
 		HOME: string;
 		OLDPWD: string;
 		LESS: string;
+		ANTIGRAVITY_CLI_ALIAS: string;
 		TERM_PROGRAM_VERSION: string;
 		VSCODE_IPC_HOOK_CLI: string;
 		npm_package_json: string;
@@ -220,8 +233,6 @@ declare module '$env/dynamic/private' {
 		FNM_ARCH: string;
 		VSCODE_GIT_ASKPASS_NODE: string;
 		DBUS_SESSION_BUS_ADDRESS: string;
-		PYDEVD_DISABLE_FILE_VALIDATION: string;
-		BUNDLED_DEBUGPY_PATH: string;
 		VSCODE_PYTHON_AUTOACTIVATE_GUARD: string;
 		npm_config_engine_strict: string;
 		WSL_DISTRO_NAME: string;
@@ -231,9 +242,9 @@ declare module '$env/dynamic/private' {
 		FNM_LOGLEVEL: string;
 		LOGNAME: string;
 		pnpm_config_verify_deps_before_run: string;
-		PULSE_SERVER: string;
-		WSL_INTEROP: string;
 		NAME: string;
+		WSL_INTEROP: string;
+		PULSE_SERVER: string;
 		_: string;
 		FNM_NODE_DIST_MIRROR: string;
 		USER_ZDOTDIR: string;
@@ -247,8 +258,6 @@ declare module '$env/dynamic/private' {
 		npm_config_frozen_lockfile: string;
 		DISPLAY: string;
 		LANG: string;
-		VSCODE_DEBUGPY_ADAPTER_ENDPOINTS: string;
-		PYTHONSTARTUP: string;
 		VSCODE_INJECTION: string;
 		LS_COLORS: string;
 		FNM_DIR: string;
@@ -272,11 +281,10 @@ declare module '$env/dynamic/private' {
 		npm_command: string;
 		PNPM_SCRIPT_SRC_DIR: string;
 		FNM_COREPACK_ENABLED: string;
-		HOSTTYPE: string;
 		WSL2_GUI_APPS_ENABLED: string;
+		HOSTTYPE: string;
 		WSLENV: string;
 		INIT_CWD: string;
-		CONSOLE_NINJA_WELCOME_SHOWN: string;
 		NODE_ENV: string;
 		[key: `PUBLIC_${string}`]: undefined;
 		[key: `${string}`]: string | undefined;

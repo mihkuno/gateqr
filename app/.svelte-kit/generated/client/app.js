@@ -17,15 +17,15 @@ export const nodes = [
 export const server_loads = [];
 
 export const dictionary = {
-		"/": [2],
-		"/dean": [3],
+		"/": [~2],
+		"/dean": [~3],
 		"/entry": [4],
 		"/login": [5],
-		"/osa": [6],
-		"/osa/dashboard": [7],
-		"/osa/departments": [8],
+		"/osa": [~6],
+		"/osa/dashboard": [~7],
+		"/osa/departments": [~8],
 		"/otp": [9],
-		"/status": [10]
+		"/status": [~10]
 	};
 
 export const hooks = {

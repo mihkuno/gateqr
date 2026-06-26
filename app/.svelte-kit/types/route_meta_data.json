@@ -1,11 +1,44 @@
 {
-	"/": [],
-	"/dean": [],
+	"/": [
+		"src/routes/+page.server.ts"
+	],
+	"/api/apply": [
+		"src/routes/api/apply/+server.ts"
+	],
+	"/api/auth/login": [
+		"src/routes/api/auth/login/+server.ts"
+	],
+	"/api/auth/logout": [
+		"src/routes/api/auth/logout/+server.ts"
+	],
+	"/api/auth/verify": [
+		"src/routes/api/auth/verify/+server.ts"
+	],
+	"/api/dean/applications": [
+		"src/routes/api/dean/applications/+server.ts"
+	],
+	"/api/departments": [
+		"src/routes/api/departments/+server.ts"
+	],
+	"/api/osa/applications": [
+		"src/routes/api/osa/applications/+server.ts"
+	],
+	"/dean": [
+		"src/routes/dean/+page.server.ts"
+	],
 	"/entry": [],
 	"/login": [],
-	"/osa": [],
-	"/osa/dashboard": [],
-	"/osa/departments": [],
+	"/osa": [
+		"src/routes/osa/+page.server.ts"
+	],
+	"/osa/dashboard": [
+		"src/routes/osa/dashboard/+page.server.ts"
+	],
+	"/osa/departments": [
+		"src/routes/osa/departments/+page.server.ts"
+	],
 	"/otp": [],
-	"/status": []
+	"/status": [
+		"src/routes/status/+page.server.ts"
+	]
 }

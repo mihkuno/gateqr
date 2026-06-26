@@ -1,228 +1,218 @@
 <script lang="ts">
+    import AppShell from '$lib/components/AppShell.svelte';
+    import NavBar from '$lib/components/NavBar.svelte';
+    import TabBar from '$lib/components/TabBar.svelte';
+    import ApplicationCard from '$lib/components/ApplicationCard.svelte';
+    import ActionBar from '$lib/components/ActionBar.svelte';
+    import { invalidateAll } from '$app/navigation';
+
+    let { data } = $props();
+    let apps = $derived(data.applications || []);
+
     let tab = $state('validation');
-    let owner = $state('no');
-    let role = $state('employee');
+    const tabs = ['validation', 'distribution', 'monitoring', 'history'];
+    const navLinks = [
+        { label: 'Dashboard', href: '/osa/dashboard' },
+        { label: 'Departments', href: '/osa/departments' },
+    ];
+
+    let displayedApps = $derived.by(() => {
+        if (tab === 'validation') return apps.filter(a => a.status === 'osa_val');
+        if (tab === 'distribution') return apps.filter(a => a.status === 'osa_dist' && !a.osa_dist_at);
+        if (tab === 'monitoring') return apps.filter(a => a.status === 'osa_dist' && a.osa_dist_at);
+        return apps.filter(a => ['rejected', 'revoked', 'expired'].includes(a.status));
+    });
+
+    let scheduleModalOpen = $state(false);
+    let selectedSchedule = $state('');
+    let pendingAction = $state<{id: number, action: string} | null>(null);
+
+    async function handleAction(registration_id: number, action: string) {
+        if (action === 'accept') {
+            pendingAction = { id: registration_id, action };
+            scheduleModalOpen = true;
+            return;
+        }
+
+        let reason = '';
+        if (action === 'reject' || action === 'revoke') {
+            reason = prompt(`Please provide a reason to ${action}:`);
+            if (reason === null) return;
+        }
+
+        await submitAction(registration_id, action, reason);
+    }
+
+    async function submitSchedule() {
+        if (!selectedSchedule) {
+            alert('Please select a schedule');
+            return;
+        }
+        if (pendingAction) {
+            await submitAction(pendingAction.id, pendingAction.action, '', selectedSchedule);
+        }
+        scheduleModalOpen = false;
+        pendingAction = null;
+        selectedSchedule = '';
+    }
+
+    async function submitAction(registration_id: number, action: string, reason: string = '', schedule: string = '') {
+        try {
+            const res = await fetch('/api/osa/applications', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ registration_id, action, reason, schedule })
+            });
+
+            if (res.ok) {
+                await invalidateAll();
+            } else {
+                const err = await res.json();
+                alert(err.error || 'Action failed');
+            }
+        } catch (e) {
+            alert('Network error');
+        }
+    }
 </script>
 
-<div class="flex justify-center bg-gray-100 min-h-screen px-3 py-6 sm:px-4 sm:py-8">
-    <div class="max-w-xl w-full flex flex-col gap-4">
+<svelte:head>
+  <title>Applications — OSA | GateQR</title>
+  <meta name="description" content="Manage vehicle sticker applications at the Office of Student Affairs." />
+</svelte:head>
 
-        <div class="flex justify-between items-center">
-            <h1 class="text-sm font-semibold text-gray-600">Applications</h1>
-            <div>
-                <a href="/osa/dashboard" class="border px-3 py-1.5 text-xs font-semibold bg-white hover:bg-gray-200 cursor-pointer">
-                    View Dashboard
-                </a>
-                <a href="/osa/departments" class="border px-3 py-1.5 text-xs font-semibold bg-white hover:bg-gray-200 cursor-pointer">
-                    Manage Departments
-                </a>
+<AppShell>
+  <NavBar title="Applications" links={navLinks} />
+
+  <TabBar {tabs} active={tab} onchange={(t) => tab = t} />
+
+  <div class="cards-list">
+    {#each displayedApps as app}
+      <ApplicationCard data={{
+        id: app.id || '-',
+        name: `${app.first_name} ${app.last_name}`,
+        role: app.role,
+        email: app.user_email,
+        department: app.department_name || '-',
+        'dept. email': app.department_email || '-',
+        vehicle: app.vehicle_make,
+        plate: app.vehicle_plate,
+        owner: app.is_owner ? 'Yes' : 'No',
+        status: app.status,
+        crd: app.created_at,
+        sgn: app.dept_val_at,
+        apv: app.osa_val_at,
+        sch: app.dist_sched,
+        exp: app.expires_at,
+        dlv: app.osa_dist_at,
+        rejection_reason: app.invalid_reason || null,
+        documents: {
+          id: app.doc_id,
+          enrollment: app.doc_load,
+          or: app.doc_or,
+          cr: app.doc_cr,
+          license: app.doc_license,
+          letter: app.doc_letter
+        }
+      }} showQR={app.doc_qr != null}>
+        {#snippet children()}
+          {#if app.doc_qr}
+            <div class="card-qr">
+              <img src={app.doc_qr} alt="QR" width="100"/>
+              <a href={app.doc_qr} download>Download</a>
             </div>
+          {/if}
+          {#if tab !== 'history'}
+            <ActionBar {tab} onaction={(action) => handleAction(app.auto_id, action)} />
+          {/if}
+        {/snippet}
+      </ApplicationCard>
+    {:else}
+      <p class="empty-state">No applications found.</p>
+    {/each}
+  </div>
+
+  {#if scheduleModalOpen}
+    <div class="modal-overlay" onclick={() => scheduleModalOpen = false}>
+      <div class="modal-content" onclick={(e) => e.stopPropagation()}>
+        <h3>Schedule Sticker Pickup</h3>
+        <p>Please select a date and time for the applicant to visit OSA.</p>
+        <input type="datetime-local" bind:value={selectedSchedule} class="sched-input" />
+        <div class="modal-actions">
+          <button class="btn-cancel" onclick={() => scheduleModalOpen = false}>Cancel</button>
+          <button class="btn-submit" onclick={submitSchedule}>Confirm Schedule</button>
         </div>
-
-        <!-- Tabs -->
-        <div class="flex gap-2 flex-wrap sm:flex-nowrap">
-            <button 
-                onclick={() => tab = 'validation'}
-                style={tab === 'validation' ? 'background-color: #e5e7eb;' : '#ffffff'}
-                class="border p-2 flex-1 min-w-[calc(50%-4px)] sm:min-w-0 bg-white text-sm font-semibold cursor-pointer hover:bg-gray-200">
-                Validation
-            </button>
-            <button 
-                onclick={() => tab = 'distribution'}
-                style={tab === 'distribution' ? 'background-color: #e5e7eb;' : '#ffffff'}
-                class="border p-2 flex-1 min-w-[calc(50%-4px)] sm:min-w-0 bg-white text-sm font-semibold cursor-pointer hover:bg-gray-200">
-                Distribution
-            </button>
-            <button 
-                onclick={() => tab = 'monitoring'}
-                style={tab === 'monitoring' ? 'background-color: #e5e7eb;' : '#ffffff'}
-                class="border p-2 flex-1 min-w-[calc(50%-4px)] sm:min-w-0 bg-white text-sm font-semibold cursor-pointer hover:bg-gray-200">
-                Monitoring
-            </button>
-            <button 
-                onclick={() => tab = 'history'}
-                style={tab === 'history' ? 'background-color: #e5e7eb;' : '#ffffff'}
-                class="border p-2 flex-1 min-w-[calc(50%-4px)] sm:min-w-0 bg-white text-sm font-semibold cursor-pointer hover:bg-gray-200">
-                History
-            </button>
-        </div>
-
-        <div class="border p-4 flex flex-col gap-4 bg-white">
-            
-            <!-- Top section: QR + Details -->
-            <div class="flex flex-col sm:flex-row gap-3 sm:gap-2 items-start">
-                
-                <!-- QR Code -->
-                {#if tab !== 'validation'}
-                    <div class="w-full sm:w-30 sm:h-30 h-20 shrink-0 border flex justify-center items-center text-xs cursor-pointer hover:bg-gray-200">
-                        QR
-                    </div>
-                {/if}
-
-                <!-- Details -->
-                <div class="flex items-start justify-between w-full min-w-0">
-                    <table class="text-sm sm:ml-4 w-full">
-                        <tbody>
-                            <tr>
-                                <td class="font-medium pr-4 pb-1 whitespace-nowrap align-top">ID:</td>
-                                <td class="pb-1 break-all">2022307166</td>
-                            </tr>
-                            <tr>
-                                <td class="font-medium pr-4 pb-1 whitespace-nowrap align-top">Name:</td>
-                                <td class="pb-1">Joeninyo Cainday</td>
-                            </tr>
-                            <tr>
-                                <td class="font-medium pr-4 pb-1 whitespace-nowrap align-top">Role:</td>
-                                <td class="pb-1">Student</td>
-                            </tr>
-                            <tr>
-                                <td class="font-medium pr-4 pb-1 whitespace-nowrap align-top">Email:</td>
-                                <td class="pb-1 break-all">joenino.cainday@liceo.edu.ph</td>
-                            </tr>
-                            <tr>
-                                <td class="font-medium pr-4 pb-1 whitespace-nowrap align-top">department:</td>
-                                <td class="pb-1">BSCS</td>
-                            </tr>
-                            <tr>
-                                <td class="font-medium pr-4 pb-1 whitespace-nowrap align-top">dean:</td>
-                                <td class="pb-1">junar.landicho@liceo.edu.ph</td>
-                            </tr>
-                            <tr>
-                                <td class="font-medium pr-4 pb-1 whitespace-nowrap align-top">Vehicle:</td>
-                                <td class="pb-1">Toyota Corolla</td>
-                            </tr>
-                            <tr>
-                                <td class="font-medium pr-4 pb-1 whitespace-nowrap align-top">Plate:</td>
-                                <td class="pb-1">ABC-1234</td>
-                            </tr>
-                            <tr>
-                                <td class="font-medium pr-4 pb-1 whitespace-nowrap align-top">Owner:</td>
-                                <td class="pb-1">No</td>
-                            </tr>
-                        </tbody>
-                    </table>
-
-                    <!-- Status -->
-                    <div class="flex flex-col gap-1 shrink-0">
-                        <div class="border p-1 font-medium text-[11px] shrink-0">CRD: Feb 06 2023</div>
-                        <div class="border p-1 font-medium text-[11px] shrink-0">APV: Feb 06 2023</div>
-                        {#if tab !== 'validation'}
-                            <div class="border p-1 font-medium text-[11px] shrink-0">SCH: Feb 06 2023</div>
-                            {#if ['monitoring', 'history'].includes(tab)}    
-                                <div class="border p-1 font-medium text-[11px] shrink-0">DLV: Mar 24 2024</div>
-                            {/if}
-                            <div class="border p-1 font-medium text-[11px] shrink-0">EXP: Mar 24 2024</div>
-                        {/if}
-                        {#if tab === 'history'}
-                            <div class="border p-1 font-medium text-[11px] shrink-0">STS: Expired</div>
-                        {/if}
-                    </div>
-                        
-                </div>
-
-            </div>
-
-            <!-- Document buttons -->
-            <div class="flex flex-col gap-2">
-                {#if role !== 'visitor'}
-                    <div class="grid gap-2 {owner === 'no' ? 'grid-cols-3' : 'grid-cols-2'}">
-                        <div class="border w-full h-20 flex justify-center items-center text-xs cursor-pointer hover:bg-gray-100">
-                            (Liceo) {role === 'student' ? 'Student' : 'Employee'} ID
-                        </div>
-                        <div class="border w-full h-20 flex justify-center items-center text-xs cursor-pointer hover:bg-gray-100">
-                            (Liceo) {role === 'student' ? 'Enrollment Form' : 'Load Sheet / DTR'}
-                        </div>
-                        {#if owner === 'no'}
-                            <div class="border w-full h-20 flex justify-center items-center text-xs cursor-pointer hover:bg-gray-200">
-                                Signed Letter / DOAS
-                            </div>
-                        {/if}
-                    </div>
-                {/if}
-                {#if role === 'visitor' && owner === 'yes'}
-                <div class="grid grid-cols-2 gap-2">
-                        <div class="border w-full h-20 flex justify-center items-center text-xs cursor-pointer hover:bg-gray-200">
-                        (LTO) Driver's License
-                    </div>
-                    <div class="border w-full h-20 flex justify-center items-center text-xs cursor-pointer hover:bg-gray-200">
-                        Signed Letter / DOAS
-                    </div>
-                    </div>
-                {/if}
-
-                <div class="grid gap-2 {role === 'visitor' && owner === 'yes' ? 'grid-cols-2' : 'grid-cols-3'}">
-                    {#if ['student', 'employee'].includes(role) || role === 'visitor' && owner === 'no'}
-                    <div class="border w-full h-20 flex justify-center items-center text-xs cursor-pointer hover:bg-gray-200">
-                        (LTO) Driver's License
-                    </div>
-                    {/if}
-                    <div class="border w-full h-20 flex justify-center items-center text-xs cursor-pointer hover:bg-gray-100">
-                        (LTO) Vehicle OR
-                    </div>
-                    <div class="border w-full h-20 flex justify-center items-center text-xs cursor-pointer hover:bg-gray-100">
-                        (LTO) Vehicle CR
-                    </div>
-                </div>
-            </div>
-
-            <!-- <label for="schedule" class="text-xs">Reason for rejection</label>
-            <p>pangit</p>
-            <div class="flex">
-                <input type="text" placeholder="what's the reason for rejection" class="w-full border" />
-                <button class=" border p-2  cursor-pointer ">
-                    Cancel
-                </button>
-                <button class=" border p-2 cursor-pointer">
-                    Continue
-                </button>
-            </div>
-            
-            <label for="schedule" class="text-xs">Reason for revocation</label>
-            <p>pangit</p>
-            <div class="flex">
-                <input type="text" placeholder="what's the reason for revocation" class="w-full border" />
-                <button class=" border p-2  cursor-pointer ">
-                    Cancel
-                </button>
-                <button class=" border p-2 cursor-pointer">
-                    Continue
-                </button>
-            </div>
-            
-            <label for="schedule" class="text-xs">Set appointment schedule</label>
-            <div class="flex">
-                <input type="datetime-local" id="schedule" class="w-full border" />
-                <button class=" border p-2  cursor-pointer ">
-                    Cancel
-                </button>
-                <button class=" border p-2 cursor-pointer">
-                    Continue
-                </button>
-            </div> -->
-            
-            <!-- Actions -->
-            {#if tab !== 'history'}
-                <div class="flex gap-2">
-                    {#if tab === 'validation'}
-                        <button class="flex-1 border p-3 text-sm cursor-pointer bg-red-200 hover:bg-red-300">
-                            Reject
-                        </button>
-                        <button class="flex-1 border p-3 text-sm cursor-pointer bg-green-200 hover:bg-green-300">
-                            Accept
-                        </button>
-                    {:else if tab === 'distribution'}
-                        <button class="flex-1 border p-3 text-sm cursor-pointer bg-violet-200 hover:bg-violet-300">
-                            Mark Delivered
-                        </button>
-                    {:else if tab === 'monitoring'}             
-                        <button class="flex-1 border p-3 text-sm cursor-pointer bg-orange-200 hover:bg-orange-300">
-                            Revoke Access
-                        </button>
-                    {/if}
-                </div>
-            {/if}
-
-        </div>
-
+      </div>
     </div>
-</div>
+  {/if}
+</AppShell>
+
+<style>
+  .cards-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    margin-top: 1rem;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    background: var(--surface);
+    border: 1.5px dashed var(--border);
+    border-radius: var(--radius-md);
+  }
+
+  .card-qr {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px dashed var(--border-light);
+  }
+
+  .modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+  .modal-content {
+    background: var(--surface);
+    padding: 1.5rem;
+    border-radius: var(--radius-md);
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+  .modal-content h3 { margin-top: 0; color: var(--maroon); margin-bottom: 0.5rem; }
+  .modal-content p { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem; }
+  .sched-input {
+    width: 100%;
+    padding: 0.75rem;
+    margin: 1rem 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+  }
+  .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+  .btn-cancel, .btn-submit {
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    border: none;
+    font-weight: 600;
+  }
+  .btn-cancel { background: var(--surface); border: 1px solid var(--border); color: var(--text-primary); }
+  .btn-submit { background: var(--maroon); color: white; }
+</style>

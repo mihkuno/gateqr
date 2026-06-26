@@ -1,0 +1,68 @@
+import { json } from '@sveltejs/kit';
+import type { RequestHandler } from './$types';
+import { db } from '$lib/server/db';
+import type { RowDataPacket } from 'mysql2';
+
+export const GET: RequestHandler = async ({ locals }) => {
+    if (!locals.user || locals.user.role !== 'dean') {
+        return json({ error: 'Unauthorized' }, { status: 403 });
+    }
+
+    try {
+        const [rows] = await db.query(`
+            SELECT * FROM registration 
+            WHERE department_id = ?
+            ORDER BY created_at DESC
+        `, [locals.user.department_id]);
+
+        return json({ applications: rows });
+    } catch (error) {
+        console.error('Failed to fetch dean applications:', error);
+        return json({ error: 'Internal Server Error' }, { status: 500 });
+    }
+};
+
+export const POST: RequestHandler = async ({ request, locals }) => {
+    if (!locals.user || locals.user.role !== 'dean') {
+        return json({ error: 'Unauthorized' }, { status: 403 });
+    }
+
+    try {
+        const { registration_id, action, reason } = await request.json();
+
+        // Check if registration belongs to dean's dept
+        const [rows] = await db.query<RowDataPacket[]>('SELECT * FROM registration WHERE auto_id = ? AND department_id = ?', 
+            [registration_id, locals.user.department_id]
+        );
+
+        if (rows.length === 0) {
+            return json({ error: 'Application not found or unauthorized' }, { status: 404 });
+        }
+
+        const reg = rows[0];
+
+        if (action === 'accept' && reg.status === 'dept_val') {
+            await db.query(`UPDATE registration SET status = 'osa_val', dept_val_at = NOW() WHERE auto_id = ?`, [registration_id]);
+        } 
+        else if (action === 'reject' && reg.status === 'dept_val') {
+            if (!reason) return json({ error: 'Reason required' }, { status: 400 });
+            await db.query(`UPDATE registration SET status = 'rejected', rejected_at = NOW(), invalid_reason = ? WHERE auto_id = ?`, [reason, registration_id]);
+        }
+        else if (action === 'revoke' && reg.status === 'osa_val') {
+            // Dean can revoke if OSA hasn't validated yet
+            if (!reason) return json({ error: 'Reason required' }, { status: 400 });
+            await db.query(`UPDATE registration SET status = 'revoked', revoked_at = NOW(), invalid_reason = ? WHERE auto_id = ?`, [reason, registration_id]);
+        }
+        else if (action === 'retract' && (reg.status === 'osa_val' || reg.status === 'rejected')) {
+            await db.query(`UPDATE registration SET status = 'dept_val', dept_val_at = NULL, rejected_at = NULL, invalid_reason = NULL WHERE auto_id = ?`, [registration_id]);
+        }
+        else {
+            return json({ error: 'Invalid action for current status' }, { status: 400 });
+        }
+
+        return json({ message: 'Application updated' });
+    } catch (error) {
+        console.error('Failed to update dean application:', error);
+        return json({ error: 'Internal Server Error' }, { status: 500 });
+    }
+};
